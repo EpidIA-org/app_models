@@ -1,0 +1,53 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Deploy Epidia Container on Azure Container Registry
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+    branches: [ master ]
+
+env:
+  PYTHON_VERSION: '3.7' 
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@master
+    
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: 'Login via Azure Container Registry'
+      uses: azure/docker-login@v1
+      with:
+        login-server: epidia.azurecr.io
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+        
+    - name: Build Docker Container
+      run: |
+        docker build .t epidia.azurecr.io/prophetcovidpred:${{ github.sha }}
+        docker push epidia.azurecr.io/prophetcovidpred:${{ github.sha }}
+        
+    - name: 'Deploy to Azure Container Instances'
+      uses: 'azure/aci-deploy@v1'
+      with:
+        resource-group: EPIDIA_RG
+        dns-name-label: url-for-container
+        image: epidia.azurecr.io/prophetcovidpred:${{ github.sha }}
+        registry-username: ${{ secrets.REGISTRY_USERNAME }}
+        registry-password: ${{ secrets.REGISTRY_PASSWORD }}
+        name: prophetcovidpred
+        secure-environment-variables: CREDENTIALS=${{ secrets.CREDENTIALS }} key2=${{ secrets.ENV_VAL2 }}
+        location: 'west us'
