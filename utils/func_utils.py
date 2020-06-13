@@ -13,5 +13,8 @@ def transform_group(group):
             min_el = 0
         else:
             min_el = min_el.min()
-        group[column] = group[column].apply(lambda x: x if x >= 0 else min_el)
+        group[column] = (group[column]
+                        .apply(lambda x: x if x >= 0 else min_el)
+                        .apply(lambda x: round(x,0))
+                        )
     return group
